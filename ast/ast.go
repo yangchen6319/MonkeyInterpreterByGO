@@ -18,12 +18,12 @@ type ExpressionNode interface {
 
 // Program 根节点Node
 type Program struct {
-	statements []StatementNode
+	Statements []StatementNode
 }
 
 func (p *Program) TokenLiteral() string {
-	if len(p.statements) > 0 {
-		return p.statements[0].TokenLiteral()
+	if len(p.Statements) > 0 {
+		return p.Statements[0].TokenLiteral()
 	} else {
 		return ""
 	}
