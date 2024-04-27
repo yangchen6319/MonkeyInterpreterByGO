@@ -75,3 +75,42 @@ func testParser(t *testing.T, stmt ast.StatementNode, expect string) bool {
 	}
 	return true
 }
+
+func TestReturnStatement(t *testing.T) {
+	input := "return 5;" +
+		"return 10;" +
+		"return handle(20);"
+	l := lexer.New(input)
+	p := New(*l)
+	program := p.ParseProgram()
+	if program == nil {
+		t.Fatalf("Parse program is nil!")
+	}
+	if len(program.Statements) == 0 {
+		t.Fatalf("program.statements is 0")
+	}
+	checkErrors(t, p)
+	validate := []struct {
+		expectLiteral string
+	}{
+		{"5"},
+		{"10"},
+		{"handle"},
+	}
+	for i, stmt := range program.Statements {
+		if !testReturn(t, stmt, validate[i].expectLiteral) {
+			t.Fatalf("test Parser fail！")
+		}
+	}
+}
+
+func testReturn(t *testing.T, stmt ast.StatementNode, expect string) bool {
+	if stmt.TokenLiteral() != "return" {
+		t.Fatalf("expected return, got %s", stmt.TokenLiteral())
+	}
+	_, ok := stmt.(*ast.ReturnStatement)
+	if !ok {
+		t.Fatalf("stmt is not ReturnStatement")
+	}
+	return true
+}

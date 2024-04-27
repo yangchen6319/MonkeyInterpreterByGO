@@ -65,6 +65,13 @@ func (p *Parser) parseStatement() ast.StatementNode {
 		} else {
 			return nil
 		}
+	case token.RETURN:
+		stmt := p.parseReturnStatement()
+		if stmt != nil {
+			return stmt
+		} else {
+			return nil
+		}
 	default:
 		return nil
 	}
@@ -88,6 +95,16 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 		p.parseNext()
 	}
 	return letStmt
+}
+
+func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
+	reStmt := &ast.ReturnStatement{Token: p.curToken}
+	p.parseNext()
+	// 跳过对表达式的处理
+	for !p.curTokenType(token.SEMICOLON) {
+		p.parseNext()
+	}
+	return reStmt
 }
 
 func (p *Parser) curTokenType(t token.TokenType) bool {
