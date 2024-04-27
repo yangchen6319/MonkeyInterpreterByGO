@@ -114,3 +114,45 @@ func testReturn(t *testing.T, stmt ast.StatementNode, expect string) bool {
 	}
 	return true
 }
+
+func TestIdentifierExpression(t *testing.T) {
+	input := "foobar;"
+	l := lexer.New(input)
+	p := New(*l)
+	program := p.ParseProgram()
+	if len(program.Statements) != 1 {
+		t.Fatalf("parseProgram is wrong!")
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements is not ExpressionStatement")
+	}
+	ident, ok := stmt.Expression.(*ast.Identifier)
+	if !ok {
+		t.Fatalf("expect *ast.Identifier, got %T", stmt.Expression)
+	}
+	if ident.Value != "foobar" {
+		t.Fatalf("expect foobar. got %s", ident.Value)
+	}
+}
+
+func TestIntegerExpression(t *testing.T) {
+	input := "100;"
+	l := lexer.New(input)
+	p := New(*l)
+	program := p.ParseProgram()
+	if len(program.Statements) != 1 {
+		t.Fatalf("parseProgram is wrong!")
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements is not ExpressionStatement")
+	}
+	integer, ok := stmt.Expression.(*ast.Integer)
+	if !ok {
+		t.Fatalf("expect *ast.Integer, got %T", stmt.Expression)
+	}
+	if integer.Value != 100 {
+		t.Fatalf("expect 100. got %d", integer.Value)
+	}
+}

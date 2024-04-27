@@ -5,6 +5,24 @@ import (
 	"MonkeyInterpreterByGO/lexer"
 	"MonkeyInterpreterByGO/token"
 	"fmt"
+	"strconv"
+)
+
+const (
+	_ int = iota
+	LOWEST
+	EQUALS
+	LESS
+	SUM
+	PRODUCT
+	PREFIX
+	CALL
+)
+
+// 定义两种类型的表达式解析函数
+type (
+	prefixParseFn func() ast.ExpressionNode
+	infixParseFn  func(node ast.ExpressionNode) ast.ExpressionNode
 )
 
 type Parser struct {
@@ -13,6 +31,9 @@ type Parser struct {
 	errors    []string
 	curToken  token.Token
 	nextToken token.Token
+	// 定义表达式解析函数映射
+	prefixParseFns map[token.TokenType]prefixParseFn
+	infixParseFns  map[token.TokenType]infixParseFn
 }
 
 func New(l lexer.Lexer) *Parser {
@@ -22,6 +43,9 @@ func New(l lexer.Lexer) *Parser {
 	}
 	p.parseNext()
 	p.parseNext()
+	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
+	p.registerPrefix(token.IDENT, p.parseExpressionIdentifier)
+	p.registerPrefix(token.INT, p.parseExpressionInt)
 	return p
 }
 
@@ -32,6 +56,15 @@ func (p *Parser) Errors() []string {
 func (p *Parser) parseNext() {
 	p.curToken = p.nextToken
 	p.nextToken = p.l.NextToken()
+}
+
+// 注册表达式解析函数映射
+func (p *Parser) registerPrefix(tokType token.TokenType, fn prefixParseFn) {
+	p.prefixParseFns[tokType] = fn
+}
+
+func (p *Parser) registerInfix(tokType token.TokenType, fn infixParseFn) {
+	p.infixParseFns[tokType] = fn
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
@@ -73,7 +106,12 @@ func (p *Parser) parseStatement() ast.StatementNode {
 			return nil
 		}
 	default:
-		return nil
+		stmt := p.parseExpressionStatement()
+		if stmt != nil {
+			return stmt
+		} else {
+			return nil
+		}
 	}
 }
 
@@ -105,6 +143,40 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 		p.parseNext()
 	}
 	return reStmt
+}
+
+// 解析表达式的函数
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	expStmt := &ast.ExpressionStatement{Token: p.curToken}
+	expStmt.Expression = p.parseExpression(LOWEST)
+	if p.peekTokenType(token.SEMICOLON) {
+		p.parseNext()
+	}
+	return expStmt
+}
+
+func (p *Parser) parseExpression(priority int) ast.ExpressionNode {
+	parseCall := p.prefixParseFns[p.curToken.Type]
+	if parseCall == nil {
+		return nil
+	}
+	return parseCall()
+}
+
+// 具体的表达式解析函数
+func (p *Parser) parseExpressionIdentifier() ast.ExpressionNode {
+	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+}
+
+func (p *Parser) parseExpressionInt() ast.ExpressionNode {
+	exp := &ast.Integer{Token: p.curToken}
+	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
+	if err != nil {
+		p.errors = append(p.errors, err.Error())
+		return nil
+	}
+	exp.Value = value
+	return exp
 }
 
 func (p *Parser) curTokenType(t token.TokenType) bool {
